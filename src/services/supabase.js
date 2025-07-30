@@ -3,13 +3,19 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
+// Vérification des variables d'environnement
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Variables d\'environnement Supabase manquantes. L\'application fonctionnera en mode local uniquement.')
+  console.warn('⚠️ Variables d\'environnement Supabase manquantes.')
+  console.warn('L\'application fonctionnera en mode local uniquement.')
+  console.warn('Pour configurer Supabase :')
+  console.warn('1. Créez un projet sur https://supabase.com')
+  console.warn('2. Ajoutez VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY dans vos variables d\'environnement')
 }
 
+// Création du client Supabase avec fallback
 export const supabase = createClient(
-  supabaseUrl || 'https://your-project.supabase.co',
-  supabaseAnonKey || 'your-anon-key'
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-key'
 )
 
 // Service d'authentification

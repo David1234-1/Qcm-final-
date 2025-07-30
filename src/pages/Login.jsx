@@ -70,6 +70,12 @@ const Login = () => {
     }
   }
 
+  const handleDemoMode = () => {
+    // Mode démo sans authentification
+    localStorage.setItem('demoMode', 'true')
+    navigate('/dashboard')
+  }
+
   return (
     <div className="min-h-screen bg-secondary-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -164,6 +170,19 @@ const Login = () => {
             >
               {resetEmailSent ? 'Email envoyé !' : 'Mot de passe oublié ?'}
             </button>
+          </div>
+
+          {/* Mode démo */}
+          <div className="mt-6 pt-6 border-t border-secondary-600">
+            <button
+              onClick={handleDemoMode}
+              className="w-full bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200"
+            >
+              🚀 Mode Démo (Sans connexion)
+            </button>
+            <p className="text-xs text-gray-500 text-center mt-2">
+              Testez l'application sans compte
+            </p>
           </div>
 
           {/* Séparateur */}

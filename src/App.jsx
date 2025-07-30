@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './stores/authStore'
 import { useThemeStore } from './stores/themeStore'
@@ -21,6 +21,14 @@ import LoadingSpinner from './components/LoadingSpinner'
 function App() {
   const { user, setUser, loading, setLoading } = useAuthStore()
   const { isDark } = useThemeStore()
+  const [error, setError] = useState(null)
+  const [demoMode, setDemoMode] = useState(false)
+
+  useEffect(() => {
+    // Vérifier le mode démo
+    const isDemoMode = localStorage.getItem('demoMode') === 'true'
+    setDemoMode(isDemoMode)
+  }, [])
 
   useEffect(() => {
     // Appliquer le thème
@@ -35,11 +43,36 @@ function App() {
     // Vérifier la session utilisateur au démarrage
     const checkUser = async () => {
       setLoading(true)
+      setError(null)
+      
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        setUser(session?.user || null)
+        // Si en mode démo, ne pas vérifier Supabase
+        if (demoMode) {
+          setLoading(false)
+          return
+        }
+
+        // Vérifier si Supabase est configuré
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+        
+        if (!supabaseUrl || !supabaseKey) {
+          console.warn('Mode démo : Supabase non configuré')
+          setLoading(false)
+          return
+        }
+
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.error('Erreur Supabase:', error)
+          setError('Erreur de connexion à la base de données')
+        } else {
+          setUser(session?.user || null)
+        }
       } catch (error) {
         console.error('Erreur lors de la vérification de la session:', error)
+        setError('Erreur de connexion')
       } finally {
         setLoading(false)
       }
@@ -47,16 +80,36 @@ function App() {
 
     checkUser()
 
-    // Écouter les changements d'authentification
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setUser(session?.user || null)
-        setLoading(false)
-      }
-    )
+    // Écouter les changements d'authentification (seulement si pas en mode démo)
+    if (!demoMode) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          setUser(session?.user || null)
+          setLoading(false)
+        }
+      )
 
-    return () => subscription.unsubscribe()
-  }, [setUser, setLoading])
+      return () => subscription.unsubscribe()
+    }
+  }, [setUser, setLoading, demoMode])
+
+  // Afficher l'erreur si elle existe
+  if (error) {
+    return (
+      <div className="min-h-screen bg-secondary-900 flex items-center justify-center p-4">
+        <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-6 max-w-md text-center">
+          <h2 className="text-xl font-semibold text-red-400 mb-2">Erreur de connexion</h2>
+          <p className="text-gray-300 mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
+          >
+            Recharger la page
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (
@@ -66,23 +119,26 @@ function App() {
     )
   }
 
+  // Vérifier si l'utilisateur est connecté ou en mode démo
+  const isAuthenticated = user || demoMode
+
   return (
     <div className="min-h-screen bg-secondary-900">
       <Routes>
         {/* Routes publiques */}
         <Route 
           path="/login" 
-          element={user ? <Navigate to="/dashboard" replace /> : <Login />} 
+          element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} 
         />
         <Route 
           path="/register" 
-          element={user ? <Navigate to="/dashboard" replace /> : <Register />} 
+          element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Register />} 
         />
         
         {/* Routes protégées */}
         <Route 
           path="/" 
-          element={user ? <Layout /> : <Navigate to="/login" replace />} 
+          element={isAuthenticated ? <Layout /> : <Navigate to="/login" replace />} 
         >
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
